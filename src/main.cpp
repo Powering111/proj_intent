@@ -30,6 +30,7 @@ For a C++ project simply rename the file to .cpp and re-run the build script
 #include "resource_dir.h"
 #include <deque>
 #include <vector>
+#include <optional>
 #include <cstdint>
 
 int main ()
@@ -44,6 +45,7 @@ int main ()
 
 	Texture t_player = LoadTexture("player.png");
 	Texture t_attack = LoadTexture("attack.png");
+	Texture t_afterimage = LoadTexture("skill.png");
 	Camera2D camera = { 0 };
 	camera.target = { 0.0f, 0.0f };
 	camera.offset = { 640.0f, 400.0f };
@@ -52,12 +54,14 @@ int main ()
 	camera.zoom = 1.0f;
 
 	Vector2 position = { 0.0f, 0.0f };
-	std::deque<Vector2> trails = std::deque<Vector2>();
 	std::vector<std::pair<Vector2,uint16_t>> attacks = std::vector<std::pair<Vector2,uint16_t>>();
-
+	std::optional<std::pair<Vector2,uint16_t>> afterimage = std::optional<std::pair<Vector2,uint16_t>>();
 	float player_speed = 5.0f;
 	unsigned int frame = 0;
-	bool clicking = false;
+
+	bool clicking = false, using_skill = false;
+	unsigned int skill_cooltime = 0; // cooltime in frames
+	const float skill_range = 240.0f;
 
 	SetTargetFPS(60);
 	// game loop
@@ -66,20 +70,34 @@ int main ()
 		frame += 1;
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
 			if(!clicking){
-				trails.clear();
+				attacks.push_back(std::make_pair(GetScreenToWorld2D(GetMousePosition(), camera), 0));
+				clicking = true;
 			}
-			trails.push_back(GetScreenToWorld2D(GetMousePosition(), camera));
-			while(trails.size() > 20){
-				trails.pop_front();
-			}
-			clicking = true;
 		}
 		else{
 			if(clicking){
-				attacks.push_back(std::make_pair(GetScreenToWorld2D(GetMousePosition(), camera), 0));
+				clicking = false;
 			}
-			if(!trails.empty()) trails.pop_front();
-			clicking = false;
+		}
+
+		using_skill = false;
+		if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
+			if(skill_cooltime == 0){
+				using_skill = true;
+				afterimage = std::optional<std::pair<Vector2,uint16_t>>{std::make_pair(position, 0)};
+				Vector2 target_position = GetScreenToWorld2D(GetMousePosition(), camera);
+				if(Vector2Distance(position, target_position) <= skill_range){
+					position = target_position;
+				}
+				else{
+					position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(target_position, position)), skill_range));
+				}
+
+				skill_cooltime = 120;
+			}
+		}
+		if(skill_cooltime > 0){
+			skill_cooltime--;
 		}
 
 		// player move
@@ -112,22 +130,25 @@ int main ()
 		DrawText("HIHI world!!!!", -100,20,30,WHITE);
 		
 		// Render player
-		DrawTextureRec(t_player, {64.0f*((frame/10)%2), 0.0f, 64.0f, 128.0f}, {position.x, position.y}, WHITE);
-
-		// Render trail
-		int i = 0;
-		for(std::deque<Vector2>::iterator trail_pos = trails.begin(); trail_pos != trails.end();){
-			Vector2 curr_pos = *trail_pos;
-			float curr_radius = (float)(i+1) / 3.0f;
-			DrawCircle(curr_pos.x, curr_pos.y, curr_radius, {102, 191, 255, 255});
-
-			trail_pos++;
-			if(trail_pos != trails.end()){
-				Vector2 next_pos = *trail_pos;
-				DrawLineEx(curr_pos, next_pos, curr_radius*2.0f, {102, 191, 255, 255});
-			}
-			i++;
+		if(skill_cooltime == 0){
+			DrawRing(position, skill_range, skill_range+3.0f, 0.0f, 360.0f, 120, {102, 191, 255, 255});
 		}
+		else{
+			DrawRing(position, skill_range, skill_range+3.0f, 0.0f, 360.0f, 120, {192, 100, 100, 255});
+			DrawRing(position, skill_range-5.0f, skill_range, -90.0f, -90.0f+3.0f*(120-skill_cooltime), 120, {150, 150, 150, 255});
+			// DrawCircleLinesV(position, skill_range, {102, 191, 255, 255});
+		}
+		if(afterimage.has_value()){
+			uint16_t anim_idx = (*afterimage).second / 2;
+			if(anim_idx <= 3){
+				*afterimage = std::make_pair((*afterimage).first, (*afterimage).second+1);
+				DrawTextureRec(t_afterimage, {64.0f*anim_idx, 0.0f, 64.0f, 64.0f}, Vector2Add((*afterimage).first, {-32.0f, -32.0f}),WHITE);
+			}
+			else{
+				afterimage = std::nullopt;
+			}
+		}
+		DrawTextureRec(t_player, {64.0f*((frame/10)%2), 0.0f, 64.0f, 128.0f}, {position.x-32.0f, position.y-64.0f}, WHITE);
 
 		// Render attacks
 		for(std::vector<std::pair<Vector2, uint16_t>>::iterator attack = attacks.begin(); attack != attacks.end(); ){
@@ -143,6 +164,7 @@ int main ()
 				attack++;
 			}
 		}
+
 
 		EndMode2D();
 
