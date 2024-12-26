@@ -9,7 +9,33 @@ TextureInfo::TextureInfo(TextureID texture_id, Texture texture_texture, Vector2 
 }
 
 void TextureInfo::render(Vector2 center, float scale, int index){
-    DrawTextureRec(texture, {size.x * (index % this->frame_count()), 0.0f, size.x, size.y}, Vector2Add(center, {-size.x/2.0f, -size.y/2.0f}), WHITE);
+    DrawTexturePro(
+        texture, 
+        {
+            size.x * (index % this->frame_count()),
+            0.0f,
+            size.x,
+            size.y
+        },
+        {
+            center.x,
+            center.y,
+            scale * size.x,
+            scale * size.y
+        },
+        {
+            scale*size.x/2.0f, 
+            scale*size.y/2.0f
+        },
+        0.0f,
+        WHITE
+    );
+    DrawRectangleLinesEx({
+        center.x - scale * size.x / 2.0f,
+        center.y - scale * size.y / 2.0f,
+        scale * size.x,
+        scale * size.y
+    }, 1.0f, WHITE);
 }
 unsigned int TextureInfo::frame_count(){
     return texture.width / int(size.x);

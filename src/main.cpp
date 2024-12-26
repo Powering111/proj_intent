@@ -1,17 +1,12 @@
 #include "raylib.h"
 #include "raymath.h"
-
 #include "resource_dir.h"
-#include <deque>
-#include <vector>
-#include <optional>
-#include <cstdint>
-#include <map>
+
 #include "texture.hpp"
 #include "entity.hpp"
 
 TextureManager textureManager = TextureManager();
-EntityManager entityManager = EntityManager();
+extern EntityManager<Particle> particleManager;
 
 int main(){
 	SetConfigFlags(FLAG_VSYNC_HINT);
@@ -30,16 +25,11 @@ int main(){
 	camera.rotation = 0.0f;
 	camera.zoom = 1.0f;
 
-	Vector2 position = { 0.0f, 0.0f };
-	std::vector<std::pair<Vector2,uint16_t>> attacks = std::vector<std::pair<Vector2,uint16_t>>();
-	std::optional<std::pair<Vector2,uint16_t>> afterimage = std::optional<std::pair<Vector2,uint16_t>>();
-
 	unsigned int frame = 0;
 
 	bool clicking = false;
 	Player player({0.0f, 0.0f});
 
-	entityManager.add_entity(&player);
 	SetTargetFPS(60);
 	// game loop
 	while (!WindowShouldClose())
@@ -74,7 +64,8 @@ int main(){
 		if(IsKeyDown(KEY_UP)) camera.target.y -= 20.0f;
 		if(IsKeyDown(KEY_DOWN)) camera.target.y += 20.0f;
 
-		entityManager.update();
+		player.update();
+		particleManager.update();
 
 		// drawing
 		BeginDrawing();
@@ -96,34 +87,9 @@ int main(){
 		DrawText("HIHI world!!!!", -100,20,30,WHITE);
 		
 		// Render player
-		if(afterimage.has_value()){
-			uint16_t anim_idx = (*afterimage).second / 2;
-			if(anim_idx <= 3){
-				*afterimage = std::make_pair((*afterimage).first, (*afterimage).second+1);
-				textureManager.get_texture(TextureID::Skill).render((*afterimage).first, 1.0f, anim_idx);
-			}
-			else{
-				afterimage = std::nullopt;
-			}
-		}
-		// player.draw();
-		entityManager.draw();
+		player.draw();
 
-		// Render attacks
-		for(std::vector<std::pair<Vector2, uint16_t>>::iterator attack = attacks.begin(); attack != attacks.end(); ){
-			uint16_t anim_idx = (*attack).second / 2;
-			if(anim_idx > 4){
-				// destroy attack
-				attack = attacks.erase(attack);
-			}
-			else{
-				// DrawTextureRec(t_attack, {64.0f * anim_idx, 0.0f, 64.0f, 64.0f}, Vector2Add((*attack).first, {-32.0f, -32.0f}), WHITE);
-				textureManager.get_texture(TextureID::Attack).render((*attack).first,2.0f,anim_idx);
-				*attack = std::make_pair((*attack).first, (*attack).second + 1);
-				attack++;
-			}
-		}
-
+		particleManager.draw();
 
 		EndMode2D();
 

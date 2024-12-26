@@ -1,37 +1,27 @@
 #include "entity.hpp"
 
 extern TextureManager textureManager;
-extern EntityManager entityManager;
+EntityManager<Particle> particleManager;
 
-void Entity::draw(){
-    textureManager.get_texture(textureID).render(this->position, 1.0f, this->anim_idx);
+
+
+void Entity::draw() const{
+    textureManager.get_texture(texture_id).render(position, scale, anim_idx);
 }
 
-
-Player::Player(Vector2 pos){
-    this->textureID = TextureID::Player;
-    this->position = pos;
-    this->anim_counter = 0;
-}
-
-void Player::move(Vector2 move_direction){
-    if(move_direction.x!=0.0f || move_direction.y!=0.0f){
-        position = Vector2Add(position, Vector2Scale(Vector2Normalize(move_direction), movement_speed));
-    }
-}
 
 void Player::update(){
-    this->anim_counter++;
-    if(this->anim_counter > 30){
-        this->anim_idx = (this->anim_idx + 1) % 2;
-        this->anim_counter = 0;
+    anim_counter++;
+    if(anim_counter > 30){
+        anim_idx = (anim_idx + 1) % 2;
+        anim_counter = 0;
     }
     if(skill_cooltime > 0){
         skill_cooltime--;
     }
 }
 
-void Player::draw(){
+void Player::draw() const{
     Entity::draw();
     if(skill_cooltime == 0){
         DrawRing(position, skill_range, skill_range+3.0f, 0.0f, 360.0f, 120, {102, 191, 255, 255});
@@ -42,13 +32,19 @@ void Player::draw(){
     }
 }
 
+void Player::move(Vector2 move_direction){
+    if(move_direction.x!=0.0f || move_direction.y!=0.0f){
+        position = Vector2Add(position, Vector2Scale(Vector2Normalize(move_direction), movement_speed));
+    }
+}
+
 void Player::attack(Vector2 attack_pos){
-    entityManager.add_entity(new Particle(attack_pos, TextureID::Attack, 6, 30));
+    particleManager.insert(Particle(attack_pos, TextureID::Attack, 6, 30, 2.0f));
 }
 
 void Player::use_skill(Vector2 skill_pos){
     if(skill_cooltime == 0){
-        entityManager.add_entity(new Particle(position, TextureID::Skill, 3, 12));
+        particleManager.insert(Particle(position, TextureID::Skill, 3, 12));
 
         if(Vector2Distance(position, skill_pos) <= skill_range){
             position = skill_pos;
@@ -61,14 +57,7 @@ void Player::use_skill(Vector2 skill_pos){
     }
 }
 
-Particle::Particle(Vector2 pos, TextureID texture_id, unsigned int particle_speed, unsigned int lifetime){
-    position = pos;
-    textureID = texture_id;
-    speed = particle_speed;
-    life = lifetime;
-    anim_idx = 0;
-    anim_cooltime = speed;
-}
+
 void Particle::update(){
     anim_cooltime--;
     if(anim_cooltime == 0){
@@ -76,27 +65,8 @@ void Particle::update(){
         anim_cooltime = speed;
     }
 
-    life--;
-    if(life == 0){
-        entityManager.remove_entity(this);
-        delete this;
-    }
-}
-
-void EntityManager::add_entity(Entity* entity){
-    entities.insert(entity);
-}
-void EntityManager::remove_entity(Entity* entity){
-    entities.erase(entity);
-}
-
-void EntityManager::update(){
-    for(Entity* entity : entities){
-        entity->update();
-    }
-}
-void EntityManager::draw(){
-    for(Entity* entity : entities){
-        entity->draw();
+    lifetime--;
+    if(lifetime == 0){
+        particleManager.remove(id);
     }
 }
