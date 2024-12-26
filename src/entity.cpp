@@ -1,9 +1,11 @@
 #include "entity.hpp"
 
 extern TextureManager textureManager;
+EntityManager<Enemy> enemyManager;
 EntityManager<Particle> particleManager;
+extern Player player;
 
-
+EntityID Entity::next_id = 0;
 
 void Entity::draw() const{
     textureManager.get_texture(texture_id).render(position, scale, anim_idx);
@@ -11,6 +13,26 @@ void Entity::draw() const{
 
 
 void Player::update(){
+    if(status == ATTACKING){
+        if(status_counter == 0){
+            // actual attack
+            Vector2 attack_pos = Vector2Add(position, Vector2Scale(attack_direction, 100.0f));
+            Vector2 line_start = position;
+		    Vector2 line_end = Vector2Add(position, Vector2Scale(attack_direction, 100.0f));
+            LineCollider attack_collider(line_start, line_end);
+            for(Enemy& enemy: enemyManager.entities){
+                if(enemy.collide(attack_collider)){
+                    enemy.damage(attack_damage);
+                }
+            }
+
+            status = IDLE;
+        }
+        else {
+            status_counter--;
+        }
+    }
+
     anim_counter++;
     if(anim_counter > 30){
         anim_idx = (anim_idx + 1) % 2;
@@ -33,18 +55,27 @@ void Player::draw() const{
 }
 
 void Player::move(Vector2 move_direction){
-    if(move_direction.x!=0.0f || move_direction.y!=0.0f){
-        position = Vector2Add(position, Vector2Scale(Vector2Normalize(move_direction), movement_speed));
+    if(status != ATTACKING){
+        if(move_direction.x!=0.0f || move_direction.y!=0.0f){
+            position = Vector2Add(position, Vector2Scale(Vector2Normalize(move_direction), movement_speed));
+        }
     }
 }
 
 void Player::attack(Vector2 attack_pos){
-    particleManager.insert(Particle(attack_pos, TextureID::Attack, 6, 30, 2.0f));
+    if(status == IDLE){
+        attack_direction = Vector2Normalize(Vector2Subtract(attack_pos, position));
+        Vector2 attack_particle_pos = Vector2Add(position, Vector2Scale(attack_direction, 100.0f));
+        particleManager.insert(std::move(Particle(attack_particle_pos, TextureID::Attack, 6, 30, 2.0f)));
+
+        status = ATTACKING;
+        status_counter = 30;
+    }
 }
 
 void Player::use_skill(Vector2 skill_pos){
-    if(skill_cooltime == 0){
-        particleManager.insert(Particle(position, TextureID::Skill, 3, 12));
+    if(skill_cooltime == 0 && status==IDLE){
+        particleManager.insert(std::move(Particle(position, TextureID::Skill, 3, 12)));
 
         if(Vector2Distance(position, skill_pos) <= skill_range){
             position = skill_pos;
@@ -55,6 +86,37 @@ void Player::use_skill(Vector2 skill_pos){
 
         skill_cooltime = 120;
     }
+}
+
+bool Player::collide(Collider const& other) const{
+    CircleCollider col(position, 30.0f);
+    Collider* col_ref = &col;
+    return other.collide(*col_ref);
+}
+
+void Player::die(){
+    TraceLog(LOG_INFO, "Player died.");
+}
+
+void Enemy::update(){
+    position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(player.position, position)), 1.0f));
+}
+
+void Enemy::draw() const{
+    Entity::draw();
+    DrawRectangle(position.x-50, position.y-76, 100, 16, GRAY);
+    DrawRectangle(position.x-50, position.y-76, 100.0f*((float)health / (float)max_health), 16, RED);
+    DrawRectangleLinesEx({position.x-52.0f, position.y-78.0f, 104.0f, 20.0f}, 2.0f, WHITE);
+}
+
+bool Enemy::collide(Collider const& other) const{
+    CircleCollider col(position, 30.0f);
+    Collider* col_ref = &col;
+    return other.collide(*col_ref);
+}
+
+void Enemy::die(){
+    enemyManager.remove(id);
 }
 
 

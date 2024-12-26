@@ -4,9 +4,12 @@
 
 #include "texture.hpp"
 #include "entity.hpp"
+#include "input.hpp"
 
 TextureManager textureManager = TextureManager();
 extern EntityManager<Particle> particleManager;
+extern EntityManager<Enemy> enemyManager;
+Player player({0.0f, 0.0f});
 
 int main(){
 	SetConfigFlags(FLAG_VSYNC_HINT);
@@ -25,46 +28,28 @@ int main(){
 	camera.rotation = 0.0f;
 	camera.zoom = 1.0f;
 
+	
+	Controller controller(&player, &camera);
+
 	unsigned int frame = 0;
 
-	bool clicking = false;
-	Player player({0.0f, 0.0f});
+	enemyManager.insert(Enemy({100.0f, 0.0f}));
+	enemyManager.insert(Enemy({-100.0f, 0.0f}));
+
 
 	SetTargetFPS(60);
 	// game loop
 	while (!WindowShouldClose())
 	{
 		frame += 1;
-		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-			if(!clicking){
-				player.attack(GetScreenToWorld2D(GetMousePosition(), camera));
-				clicking = true;
-			}
-		}
-		else{
-			if(clicking){
-				clicking = false;
-			}
+		if(IsKeyPressed(KEY_EIGHT)){
+			enemyManager.insert(Enemy({(rand()%5-2)*100.0f, (rand()%5-2)*100.0f}));
 		}
 
-		if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
-			player.use_skill(GetScreenToWorld2D(GetMousePosition(), camera));
-		}
-
-		// player move
-		Vector2 move_direction = {0.0f, 0.0f};
-		if(IsKeyDown(KEY_A)) move_direction.x -= 1.0f;
-		if(IsKeyDown(KEY_D)) move_direction.x += 1.0f;
-		if(IsKeyDown(KEY_W)) move_direction.y -= 1.0f;
-		if(IsKeyDown(KEY_S)) move_direction.y += 1.0f;
-		player.move(move_direction);
-
-		if(IsKeyDown(KEY_LEFT)) camera.target.x -= 20.0f;
-		if(IsKeyDown(KEY_RIGHT)) camera.target.x += 20.0f;
-		if(IsKeyDown(KEY_UP)) camera.target.y -= 20.0f;
-		if(IsKeyDown(KEY_DOWN)) camera.target.y += 20.0f;
+		controller.handle_input();
 
 		player.update();
+		enemyManager.update();
 		particleManager.update();
 
 		// drawing
@@ -74,22 +59,43 @@ int main(){
 
 		// UI
 		DrawCircle(640, 400, 3.0f, BLUE);
-		DrawCircle(0, 0, 10.0f, GREEN);
-		DrawCircle(1280, 800, 10.0f, GREEN);
 		DrawText(TextFormat("Frame %u", frame), 0, 0, 20, WHITE);
 		DrawText(TextFormat("%d FPS", GetFPS()), 0, 20, 20, WHITE);
 		
 		// World
 		BeginMode2D(camera);
 
-		DrawCircle(0, 0, 3.0f, RED);
-		DrawCircle(1280, 800, 3.0f, PURPLE);
+		DrawCircle(0, 0, 3.0f, WHITE);
 		DrawText("HIHI world!!!!", -100,20,30,WHITE);
 		
 		// Render player
 		player.draw();
-
+		enemyManager.draw();
 		particleManager.draw();
+
+
+		// 
+		Vector2 mouse_pos = GetScreenToWorld2D(GetMousePosition(), camera);
+		Vector2 direction_vector = Vector2Normalize(Vector2Subtract(mouse_pos, player.position));
+		Vector2 line_start = player.position;
+		Vector2 line_end = Vector2Add(player.position, Vector2Scale(direction_vector, 100.0f));
+		LineCollider line_collider = LineCollider(line_start, line_end);
+		bool k = false;
+		for(Enemy& enemy : enemyManager.entities){
+			if(enemy.collide(line_collider)){
+				k = true;
+				DrawCircleLinesV(enemy.position, 30.0f, RED);
+			}
+			else{
+				DrawCircleLinesV(enemy.position, 30.0f, BLUE);
+			}
+		}
+		if(k){
+			DrawLineEx(line_start, line_end, 5.0f, RED);
+		}
+		else{
+			DrawLineEx(line_start, line_end, 5.0f, BLUE);
+		}
 
 		EndMode2D();
 

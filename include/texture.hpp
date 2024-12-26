@@ -7,6 +7,7 @@ enum class TextureID {
     Player,
     Attack,
     Skill,
+    Enemy,
 };
 
 class TextureInfo {

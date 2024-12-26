@@ -49,6 +49,7 @@ struct {
     {TextureID::Player, "player.png", {64.0f, 128.0f}},
     {TextureID::Attack, "attack.png", {64.0f, 64.0f}},
     {TextureID::Skill, "skill.png", {64.0f, 64.0f}},
+    {TextureID::Enemy, "enemy.png", {64.0f, 64.0f}},
 };
 
 void TextureManager::load_textures(){
