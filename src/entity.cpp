@@ -38,20 +38,32 @@ void Player::update(){
         anim_idx = (anim_idx + 1) % 2;
         anim_counter = 0;
     }
-    if(skill_cooltime > 0){
-        skill_cooltime--;
+    if(skill_teleport_cooltime > 0){
+        skill_teleport_cooltime--;
+    }
+    if(skill_sweep_cooltime > 0){
+        skill_sweep_cooltime--;
     }
 }
 
 void Player::draw() const{
     Entity::draw();
-    if(skill_cooltime == 0){
-        DrawRing(position, skill_range, skill_range+3.0f, 0.0f, 360.0f, 120, {102, 191, 255, 255});
+    if(skill_teleport_cooltime == 0){
+        DrawRing(position, skill_teleport_range, skill_teleport_range+2.0f, 0.0f, 360.0f, 120, {102, 191, 255, 255});
     }
     else{
-        DrawRing(position, skill_range, skill_range+3.0f, 0.0f, 360.0f, 120, {192, 100, 100, 255});
-        DrawRing(position, skill_range-5.0f, skill_range, -90.0f, -90.0f+3.0f*(120-skill_cooltime), 120, {150, 150, 150, 255});
+        DrawRing(position, skill_teleport_range, skill_teleport_range+2.0f, 0.0f, 360.0f, 120, {192, 100, 100, 255});
+        DrawRing(position, skill_teleport_range-2.0f, skill_teleport_range, -90.0f, -90.0f+3.0f*(120-skill_teleport_cooltime), 120, {150, 150, 150, 255});
     }
+
+    if(skill_sweep_cooltime == 0){
+        DrawRing(position, skill_sweep_range, skill_sweep_range+2.0f, 0.0f, 360.0f, 120, {78, 252, 113, 255});
+    }
+    else{
+        DrawRing(position, skill_sweep_range, skill_sweep_range+2.0f, 0.0f, 360.0f, 120, {192, 100, 100, 255});
+        DrawRing(position, skill_sweep_range-2.0f, skill_sweep_range, -90.0f, -90.0f+1.5f*(240-skill_sweep_cooltime), 120, {150, 150, 150, 255});
+    }
+
 }
 
 void Player::move(Vector2 move_direction){
@@ -73,18 +85,30 @@ void Player::attack(Vector2 attack_pos){
     }
 }
 
-void Player::use_skill(Vector2 skill_pos){
-    if(skill_cooltime == 0 && status==IDLE){
+void Player::skill_teleport(Vector2 skill_pos){
+    if(skill_teleport_cooltime == 0 && status==IDLE){
         particleManager.insert(std::move(Particle(position, TextureID::Skill, 3, 12)));
 
-        if(Vector2Distance(position, skill_pos) <= skill_range){
+        if(Vector2Distance(position, skill_pos) <= skill_teleport_range){
             position = skill_pos;
         }
         else{
-            position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(skill_pos, position)), skill_range));
+            position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(skill_pos, position)), skill_teleport_range));
         }
 
-        skill_cooltime = 120;
+        skill_teleport_cooltime = 120;
+    }
+}
+
+void Player::skill_sweep(){
+    if(skill_sweep_cooltime == 0){
+        particleManager.insert(std::move(Particle(position, TextureID::Sweep, 3, 12)));
+        for(Enemy& enemy : enemyManager.entities){
+            if(enemy.collide(CircleCollider(position, skill_sweep_range))){
+                enemy.damage(40);
+            }
+        }
+        skill_sweep_cooltime = 240;
     }
 }
 
@@ -99,7 +123,10 @@ void Player::die(){
 }
 
 void Enemy::update(){
-    position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(player.position, position)), 1.0f));
+    if(Vector2Distance(player.position, position) > 500.0f){
+        // move towards player
+        position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(player.position, position)), 1.0f));
+    }
 }
 
 void Enemy::draw() const{

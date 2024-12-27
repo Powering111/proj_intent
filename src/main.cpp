@@ -47,10 +47,12 @@ int main(){
 		}
 
 		controller.handle_input();
-
-		player.update();
-		enemyManager.update();
-		particleManager.update();
+		
+		if(!IsKeyDown(KEY_SPACE)){
+			player.update();
+			enemyManager.update();
+			particleManager.update();
+		}
 
 		// drawing
 		BeginDrawing();

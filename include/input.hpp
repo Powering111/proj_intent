@@ -23,8 +23,25 @@ public:
 		}
         
 		if(IsKeyPressed(KEY_LEFT_SHIFT)){
-			player->use_skill(GetScreenToWorld2D(GetMousePosition(), *camera));
+			player->skill_teleport(GetScreenToWorld2D(GetMousePosition(), *camera));
 		}
+
+		if(IsKeyPressed(KEY_E)){
+			player->skill_sweep();
+		}
+
+		float wheel = GetMouseWheelMove();
+		if(wheel!=0.0f) {
+			if(wheel>0.0f){
+				camera->zoom = Clamp(camera->zoom * 1.1f, 1.0f, 10.0f);
+
+			}
+			else if(wheel<0.0f){
+				camera->zoom = Clamp(camera->zoom * 0.9f, 1.0f, 10.0f);
+
+			}
+		}
+		
 
         // player move
 		Vector2 move_direction = {0.0f, 0.0f};

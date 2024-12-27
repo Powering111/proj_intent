@@ -50,6 +50,7 @@ struct {
     {TextureID::Attack, "attack.png", {64.0f, 64.0f}},
     {TextureID::Skill, "skill.png", {64.0f, 64.0f}},
     {TextureID::Enemy, "enemy.png", {64.0f, 64.0f}},
+    {TextureID::Sweep, "sweep.png", {160.0f, 160.0f}},
 };
 
 void TextureManager::load_textures(){

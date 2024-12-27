@@ -40,14 +40,16 @@ public:
     virtual bool collide(Collider const& other) const = 0;
 
     void damage(unsigned int damage) {
-        health -= damage;
-        if(health <= 0){
+        if(damage >= health){
             health = 0;
             if(!died){
                 died = true;
                 // death
                 die();
             }
+        }
+        else{
+            health -= damage;
         }
     };
 
@@ -57,7 +59,8 @@ public:
 class Player : public MortalEntity{
 private:
     unsigned int anim_counter;
-    float skill_range=240.0f;
+    float skill_teleport_range=240.0f;
+    float skill_sweep_range=100.0f;
     float movement_speed=6.0f;
 
     enum {
@@ -68,7 +71,8 @@ private:
     Vector2 attack_direction;
     unsigned int attack_damage = 20;
 public:
-    unsigned int skill_cooltime=0;
+    unsigned int skill_teleport_cooltime=0;
+    unsigned int skill_sweep_cooltime=0;
     
     Player(Vector2 c_position) : MortalEntity(c_position, TextureID::Player, 0, 1.0f, 100), anim_counter(0), status(IDLE) {};
 
@@ -78,7 +82,8 @@ public:
 
     void move(Vector2 move_direction);
     void attack(Vector2 attack_pos);
-    void use_skill(Vector2 skill_pos);
+    void skill_teleport(Vector2 skill_pos);
+    void skill_sweep();
 
     void die();
 };
@@ -113,23 +118,28 @@ public:
 
 template <typename E>
 class EntityManager {
+    std::vector<EntityID> to_remove;
 public:
     std::vector<E> entities;
     void insert(E&& entity){
         entities.push_back(entity);
     }
 
-    bool remove(EntityID id){
-        for(typename std::vector<E>::iterator it = entities.begin(); it!=entities.end(); it++){
-            if(it->id == id){
-                entities.erase(it);
-                return true;
-            }
-        }
-        return false;
+    void remove(EntityID id){
+        to_remove.push_back(id);
     }
 
     void update(){
+        for(std::vector<EntityID>::iterator victim = to_remove.begin(); victim != to_remove.end(); victim++){
+            for(typename std::vector<E>::iterator it = entities.begin(); it!=entities.end(); it++){
+                if(it->id == *victim){
+                    entities.erase(it);
+                    break;
+                }
+            }
+        }
+        to_remove.clear();
+
         for(E& entity : entities){
             entity.update();
         }
