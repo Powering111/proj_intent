@@ -1,14 +1,9 @@
 #include "entity.hpp"
 
-extern TextureManager textureManager;
-EntityManager<Enemy> enemyManager;
-EntityManager<Particle> particleManager;
-extern Player player;
-
 EntityID Entity::next_id = 0;
 
 void Entity::draw() const{
-    textureManager.get_texture(texture_id).render(position, scale, anim_idx);
+    world->texture_m.get_texture(texture_id).render(position, scale, anim_idx);
 }
 
 
@@ -20,7 +15,7 @@ void Player::update(){
             Vector2 line_start = position;
 		    Vector2 line_end = Vector2Add(position, Vector2Scale(attack_direction, 100.0f));
             LineCollider attack_collider(line_start, line_end);
-            for(Enemy& enemy: enemyManager.entities){
+            for(Enemy& enemy: world->enemy_m.entities){
                 if(enemy.collide(attack_collider)){
                     enemy.damage(attack_damage);
                 }
@@ -78,7 +73,7 @@ void Player::attack(Vector2 attack_pos){
     if(status == IDLE){
         attack_direction = Vector2Normalize(Vector2Subtract(attack_pos, position));
         Vector2 attack_particle_pos = Vector2Add(position, Vector2Scale(attack_direction, 100.0f));
-        particleManager.insert(std::move(Particle(attack_particle_pos, TextureID::Attack, 6, 30, 2.0f)));
+        world->particle_m.insert(std::move(Particle(world, attack_particle_pos, TextureID::Attack, 6, 30, 2.0f)));
 
         status = ATTACKING;
         status_counter = 30;
@@ -87,7 +82,7 @@ void Player::attack(Vector2 attack_pos){
 
 void Player::skill_teleport(Vector2 skill_pos){
     if(skill_teleport_cooltime == 0 && status==IDLE){
-        particleManager.insert(std::move(Particle(position, TextureID::Skill, 3, 12)));
+        world->particle_m.insert(std::move(Particle(world, position, TextureID::Skill, 3, 12)));
 
         if(Vector2Distance(position, skill_pos) <= skill_teleport_range){
             position = skill_pos;
@@ -102,8 +97,8 @@ void Player::skill_teleport(Vector2 skill_pos){
 
 void Player::skill_sweep(){
     if(skill_sweep_cooltime == 0){
-        particleManager.insert(std::move(Particle(position, TextureID::Sweep, 3, 12)));
-        for(Enemy& enemy : enemyManager.entities){
+        world->particle_m.insert(std::move(Particle(world, position, TextureID::Sweep, 3, 12)));
+        for(Enemy& enemy : world->enemy_m.entities){
             if(enemy.collide(CircleCollider(position, skill_sweep_range))){
                 enemy.damage(40);
             }
@@ -123,9 +118,9 @@ void Player::die(){
 }
 
 void Enemy::update(){
-    if(Vector2Distance(player.position, position) > 500.0f){
+    if(Vector2Distance(world->player.position, position) > 500.0f){
         // move towards player
-        position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(player.position, position)), 1.0f));
+        position = Vector2Add(position, Vector2Scale(Vector2Normalize(Vector2Subtract(world->player.position, position)), 1.0f));
     }
 }
 
@@ -143,7 +138,7 @@ bool Enemy::collide(Collider const& other) const{
 }
 
 void Enemy::die(){
-    enemyManager.remove(id);
+    world->enemy_m.remove(id);
 }
 
 
@@ -156,6 +151,6 @@ void Particle::update(){
 
     lifetime--;
     if(lifetime == 0){
-        particleManager.remove(id);
+        world->particle_m.remove(id);
     }
 }

@@ -30,12 +30,13 @@ void TextureInfo::render(Vector2 center, float scale, int index){
         0.0f,
         WHITE
     );
-    DrawRectangleLinesEx({
-        center.x - scale * size.x / 2.0f,
-        center.y - scale * size.y / 2.0f,
-        scale * size.x,
-        scale * size.y
-    }, 1.0f, WHITE);
+
+    // DrawRectangleLinesEx({
+    //     center.x - scale * size.x / 2.0f,
+    //     center.y - scale * size.y / 2.0f,
+    //     scale * size.x,
+    //     scale * size.y
+    // }, 1.0f, WHITE);
 }
 unsigned int TextureInfo::frame_count(){
     return texture.width / int(size.x);

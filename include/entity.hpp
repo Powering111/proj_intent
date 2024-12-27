@@ -1,16 +1,19 @@
 #pragma once
+
 #include <vector>
 #include <cstdint>
 #include "texture.hpp"
 #include "collider.hpp"
 #include "raylib.h"
 #include "raymath.h"
+class World;
 
 typedef uint64_t EntityID;
 
 // Entity is what can be rendered.
 class Entity{
 protected:
+    World* world; // world it is located in.
     TextureID texture_id;
     unsigned int anim_idx;
     float scale;
@@ -18,7 +21,7 @@ protected:
 public:
     EntityID id;
     Vector2 position;
-    Entity(Vector2 c_position, TextureID c_texture_id, uint32_t c_anim_idx = 0, float c_scale = 1.0f): position(c_position), texture_id(c_texture_id), anim_idx(c_anim_idx), scale(c_scale) {
+    Entity(World* c_world, Vector2 c_position, TextureID c_texture_id, uint32_t c_anim_idx = 0, float c_scale = 1.0f): world(c_world), position(c_position), texture_id(c_texture_id), anim_idx(c_anim_idx), scale(c_scale) {
         id = next_id++;
     };
 
@@ -31,8 +34,8 @@ public:
     unsigned int max_health;
     unsigned int health;
     bool died = false;
-    MortalEntity(Vector2 c_position, TextureID c_texture_id, uint32_t c_anim_idx = 0, float c_scale = 1.0f, unsigned int c_max_health=100): 
-        Entity(c_position, c_texture_id, c_anim_idx, c_scale), 
+    MortalEntity(World* c_world, Vector2 c_position, TextureID c_texture_id, uint32_t c_anim_idx = 0, float c_scale = 1.0f, unsigned int c_max_health=100): 
+        Entity(c_world, c_position, c_texture_id, c_anim_idx, c_scale), 
         max_health(c_max_health), 
         health(c_max_health) 
     {};
@@ -74,7 +77,7 @@ public:
     unsigned int skill_teleport_cooltime=0;
     unsigned int skill_sweep_cooltime=0;
     
-    Player(Vector2 c_position) : MortalEntity(c_position, TextureID::Player, 0, 1.0f, 100), anim_counter(0), status(IDLE) {};
+    Player(World* c_world, Vector2 c_position) : MortalEntity(c_world, c_position, TextureID::Player, 0, 1.0f, 100), anim_counter(0), status(IDLE) {};
 
     void update();
     void draw() const override;
@@ -90,7 +93,7 @@ public:
 
 class Enemy: public MortalEntity{
 public:
-    Enemy(Vector2 c_position): MortalEntity(c_position, TextureID::Enemy, 0, 1.0f, 100) {}
+    Enemy(World* c_world, Vector2 c_position): MortalEntity(c_world, c_position, TextureID::Enemy, 0, 1.0f, 100) {}
 
     bool collide(Collider const& other) const override;
     CircleCollider get_collider(){
@@ -111,7 +114,7 @@ private:
     unsigned int anim_cooltime;
     unsigned int lifetime;
 public:
-    Particle(Vector2 c_position, TextureID c_texture_id, unsigned int c_speed, unsigned int c_lifetime, float c_scale = 1.0f): Entity(c_position, c_texture_id, 0, c_scale), speed(c_speed), lifetime(c_lifetime) , anim_cooltime(c_speed) {};
+    Particle(World* c_world, Vector2 c_position, TextureID c_texture_id, unsigned int c_speed, unsigned int c_lifetime, float c_scale = 1.0f): Entity(c_world, c_position, c_texture_id, 0, c_scale), speed(c_speed), lifetime(c_lifetime) , anim_cooltime(c_speed) {};
 
     void update() override;
 };
@@ -151,3 +154,6 @@ public:
         }
     }
 };
+
+
+#include "world.hpp"
